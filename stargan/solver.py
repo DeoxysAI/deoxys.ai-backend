@@ -8,7 +8,7 @@ import numpy as np
 import os
 import time
 import datetime
-
+import sys
 
 class Solver(object):
     """Solver for training and testing StarGAN."""
@@ -565,7 +565,7 @@ class Solver(object):
 
                 # Save the translated images.
                 x_concat = torch.cat(x_fake_list, dim=3)
-                result_path = os.path.join('{}-images.jpg'.format(i+1))
+                result_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0]))+'/resultImg/{}-images.jpg'.format(i+1))
                 save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
                 print('{}-images.jpg'.format(i+1))
 
