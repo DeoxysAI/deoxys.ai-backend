@@ -43,8 +43,8 @@ class CelebA(data.Dataset):
             split = line.split()
             filename = split[0]
             values = split[1:]
-
             label = []
+            self.selected_attrs = self.selected_attrs.split()
             for attr_name in self.selected_attrs:
                 idx = self.attr2idx[attr_name]
                 label.append(values[idx] == '1')
@@ -53,8 +53,10 @@ class CelebA(data.Dataset):
                 self.test_dataset.append([filename, label])
             else:
                 self.train_dataset.append([filename, label])
+        #print(len(self.train_dataset))
+        #print(len(self.test_dataset))
 
-        print('Finished preprocessing the CelebA dataset...')
+        #print('Finished preprocessing the CelebA dataset...')
 
     def __getitem__(self, index):
         """Return one image and its corresponding attribute label."""
@@ -81,7 +83,7 @@ def get_loader(image_dir, attr_path, selected_attrs, crop_size=178, image_size=1
     transform = T.Compose(transform)
 
     if dataset == 'CelebA':
-        dataset = CelebA(image_dir, attr_path, selected_attrs, transform, mode)
+        dataset = CelebA(image_dir = image_dir, attr_path = attr_path, selected_attrs = selected_attrs, transform = transform, mode = mode)
     elif dataset == 'RaFD':
         dataset = ImageFolder(image_dir, transform)
 

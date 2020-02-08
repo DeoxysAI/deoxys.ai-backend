@@ -109,3 +109,7 @@ dist
 .vscode
 
 stargan/data
+*/__pycache__
+*/torch_env
+*/gan_env
+*/dcgan_env

@@ -13,7 +13,26 @@ import datetime
 class Solver(object):
     """Solver for training and testing StarGAN."""
 
-    def __init__(self, celeba_loader, rafd_loader, config):
+    def __init__(self, celeba_loader, rafd_loader, dataset, selected_attrs):
+        """Initialize configurations."""
+
+        # Data loader.
+        from model import Generator
+from model import Discriminator
+from torch.autograd import Variable
+from torchvision.utils import save_image
+import torch
+import torch.nn.functional as F
+import numpy as np
+import os
+import time
+import datetime
+
+
+class Solver(object):
+    """Solver for training and testing StarGAN."""
+
+    def __init__(self, celeba_loader, rafd_loader, dataset, selected_attrs):
         """Initialize configurations."""
 
         # Data loader.
@@ -21,48 +40,48 @@ class Solver(object):
         self.rafd_loader = rafd_loader
 
         # Model configurations.
-        self.c_dim = config.c_dim
-        self.c2_dim = config.c2_dim
-        self.image_size = config.image_size
-        self.g_conv_dim = config.g_conv_dim
-        self.d_conv_dim = config.d_conv_dim
-        self.g_repeat_num = config.g_repeat_num
-        self.d_repeat_num = config.d_repeat_num
-        self.lambda_cls = config.lambda_cls
-        self.lambda_rec = config.lambda_rec
-        self.lambda_gp = config.lambda_gp
+        self.c_dim = 5
+        self.c2_dim = 4
+        self.image_size = 128
+        self.g_conv_dim = 64
+        self.d_conv_dim = 64
+        self.g_repeat_num = 6
+        self.d_repeat_num = 6
+        self.lambda_cls = 1
+        self.lambda_rec = 10
+        self.lambda_gp = 10
 
         # Training configurations.
-        self.dataset = config.dataset
-        self.batch_size = config.batch_size
-        self.num_iters = config.num_iters
-        self.num_iters_decay = config.num_iters_decay
-        self.g_lr = config.g_lr
-        self.d_lr = config.d_lr
-        self.n_critic = config.n_critic
-        self.beta1 = config.beta1
-        self.beta2 = config.beta2
-        self.resume_iters = config.resume_iters
-        self.selected_attrs = config.selected_attrs
+        self.dataset = dataset
+        self.batch_size = 16
+        self.num_iters = 200000
+        self.num_iters_decay = 100000
+        self.g_lr = 0.0001
+        self.d_lr = 0.0001
+        self.n_critic = 5
+        self.beta1 = 0.5
+        self.beta2 = 0.999
+        self.resume_iters = None
+        self.selected_attrs = selected_attrs
 
         # Test configurations.
-        self.test_iters = config.test_iters
+        self.test_iters = 200000
 
         # Miscellaneous.
-        self.use_tensorboard = config.use_tensorboard
+        self.use_tensorboard = True
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # Directories.
-        self.log_dir = config.log_dir
-        self.sample_dir = config.sample_dir
-        self.model_save_dir = config.model_save_dir
-        self.result_dir = config.result_dir
+        self.log_dir = 'stargan/logs'
+        self.sample_dir = 'stargan/samples'
+        self.model_save_dir = 'stargan/models'
+        self.result_dir = 'stargan/results'
 
         # Step size.
-        self.log_step = config.log_step
-        self.sample_step = config.sample_step
-        self.model_save_step = config.model_save_step
-        self.lr_update_step = config.lr_update_step
+        self.log_step = 10
+        self.sample_step = 1000
+        self.model_save_step = 10000
+        self.lr_update_step = 1000
 
         # Build the model and tensorboard.
         self.build_model()
@@ -80,8 +99,8 @@ class Solver(object):
 
         self.g_optimizer = torch.optim.Adam(self.G.parameters(), self.g_lr, [self.beta1, self.beta2])
         self.d_optimizer = torch.optim.Adam(self.D.parameters(), self.d_lr, [self.beta1, self.beta2])
-        self.print_network(self.G, 'G')
-        self.print_network(self.D, 'D')
+        #self.print_network(self.G, 'G')
+        #self.print_network(self.D, 'D')
             
         self.G.to(self.device)
         self.D.to(self.device)
@@ -91,13 +110,13 @@ class Solver(object):
         num_params = 0
         for p in model.parameters():
             num_params += p.numel()
-        print(model)
-        print(name)
-        print("The number of parameters: {}".format(num_params))
+        #print(model)
+        #print(name)
+        #print("The number of parameters: {}".format(num_params))
 
     def restore_model(self, resume_iters):
         """Restore the trained generator and discriminator."""
-        print('Loading the trained models from step {}...'.format(resume_iters))
+        #print('Loading the trained models from step {}...'.format(resume_iters))
         G_path = os.path.join(self.model_save_dir, '{}-G.ckpt'.format(resume_iters))
         D_path = os.path.join(self.model_save_dir, '{}-D.ckpt'.format(resume_iters))
         self.G.load_state_dict(torch.load(G_path, map_location=lambda storage, loc: storage))
@@ -204,7 +223,7 @@ class Solver(object):
             self.restore_model(self.resume_iters)
 
         # Start training.
-        print('Start training...')
+        #print('Start training...')
         start_time = time.time()
         for i in range(start_iters, self.num_iters):
 
@@ -306,7 +325,7 @@ class Solver(object):
                 log = "Elapsed [{}], Iteration [{}/{}]".format(et, i+1, self.num_iters)
                 for tag, value in loss.items():
                     log += ", {}: {:.4f}".format(tag, value)
-                print(log)
+                #print(log)
 
                 if self.use_tensorboard:
                     for tag, value in loss.items():
@@ -321,7 +340,7 @@ class Solver(object):
                     x_concat = torch.cat(x_fake_list, dim=3)
                     sample_path = os.path.join(self.sample_dir, '{}-images.jpg'.format(i+1))
                     save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
-                    print('Saved real and fake images into {}...'.format(sample_path))
+                    #print('Saved real and fake images into {}...'.format(sample_path))
 
             # Save model checkpoints.
             if (i+1) % self.model_save_step == 0:
@@ -329,14 +348,14 @@ class Solver(object):
                 D_path = os.path.join(self.model_save_dir, '{}-D.ckpt'.format(i+1))
                 torch.save(self.G.state_dict(), G_path)
                 torch.save(self.D.state_dict(), D_path)
-                print('Saved model checkpoints into {}...'.format(self.model_save_dir))
+                #print('Saved model checkpoints into {}...'.format(self.model_save_dir))
 
             # Decay learning rates.
             if (i+1) % self.lr_update_step == 0 and (i+1) > (self.num_iters - self.num_iters_decay):
                 g_lr -= (self.g_lr / float(self.num_iters_decay))
                 d_lr -= (self.d_lr / float(self.num_iters_decay))
                 self.update_lr(g_lr, d_lr)
-                print ('Decayed learning rates, g_lr: {}, d_lr: {}.'.format(g_lr, d_lr))
+                #print ('Decayed learning rates, g_lr: {}, d_lr: {}.'.format(g_lr, d_lr))
 
     def train_multi(self):
         """Train StarGAN with multiple datasets."""        
@@ -365,7 +384,7 @@ class Solver(object):
             self.restore_model(self.resume_iters)
 
         # Start training.
-        print('Start training...')
+        #print('Start training...')
         start_time = time.time()
         for i in range(start_iters, self.num_iters):
             for dataset in ['CelebA', 'RaFD']:
@@ -503,7 +522,7 @@ class Solver(object):
                     x_concat = torch.cat(x_fake_list, dim=3)
                     sample_path = os.path.join(self.sample_dir, '{}-images.jpg'.format(i+1))
                     save_image(self.denorm(x_concat.data.cpu()), sample_path, nrow=1, padding=0)
-                    print('Saved real and fake images into {}...'.format(sample_path))
+                    #print('Saved real and fake images into {}...'.format(sample_path))
 
             # Save model checkpoints.
             if (i+1) % self.model_save_step == 0:
@@ -511,14 +530,14 @@ class Solver(object):
                 D_path = os.path.join(self.model_save_dir, '{}-D.ckpt'.format(i+1))
                 torch.save(self.G.state_dict(), G_path)
                 torch.save(self.D.state_dict(), D_path)
-                print('Saved model checkpoints into {}...'.format(self.model_save_dir))
+                #print('Saved model checkpoints into {}...'.format(self.model_save_dir))
 
             # Decay learning rates.
             if (i+1) % self.lr_update_step == 0 and (i+1) > (self.num_iters - self.num_iters_decay):
                 g_lr -= (self.g_lr / float(self.num_iters_decay))
                 d_lr -= (self.d_lr / float(self.num_iters_decay))
                 self.update_lr(g_lr, d_lr)
-                print ('Decayed learning rates, g_lr: {}, d_lr: {}.'.format(g_lr, d_lr))
+                #print ('Decayed learning rates, g_lr: {}, d_lr: {}.'.format(g_lr, d_lr))
 
     def test(self):
         """Translate images using StarGAN trained on a single dataset."""
@@ -531,7 +550,8 @@ class Solver(object):
         elif self.dataset == 'RaFD':
             data_loader = self.rafd_loader
         
-        with torch.no_grad():
+        with torch.no_grad():   
+            #print(iter(data_loader))
             for i, (x_real, c_org) in enumerate(data_loader):
 
                 # Prepare input images and target domain labels.
@@ -545,10 +565,10 @@ class Solver(object):
 
                 # Save the translated images.
                 x_concat = torch.cat(x_fake_list, dim=3)
-                result_path = os.path.join(self.result_dir, '{}-images.jpg'.format(i+1))
+                result_path = os.path.join('{}-images.jpg'.format(i+1))
                 save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
                 print('{}-images.jpg'.format(i+1))
-                
+
     def test_multi(self):
         """Translate images using StarGAN trained on multiple datasets."""
         # Load the trained generator.
@@ -579,4 +599,5 @@ class Solver(object):
                 x_concat = torch.cat(x_fake_list, dim=3)
                 result_path = os.path.join(self.result_dir, '{}-images.jpg'.format(i+1))
                 save_image(self.denorm(x_concat.data.cpu()), result_path, nrow=1, padding=0)
-                print('Saved real and fake images into {}...'.format(result_path))
+                #print('Saved real and fake images into {}...'.format(result_path))
+
