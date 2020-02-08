@@ -1,0 +1,7 @@
+Run preprocessImg.py first to do resize image and get the attributes.
+After that run this piece of code with the directory names respectively
+
+
+preprocessImg.py args : imagename, attribute select
+
+python3 main.py --mode test --dataset CelebA --image_size 128 --selected_attrs (the selected attribute) --c_dim 1 --celeba_image_dir ../images --attr_path newAttr.txt --model_save_dir stargan_celeba_128/models --result_dir resultImg
