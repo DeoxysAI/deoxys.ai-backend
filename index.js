@@ -10,6 +10,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use("/stargan/resultImg", express.static("stargan/resultImg"));
+app.use("/dcgan/resultImg", express.static("dcgan/resultImg"));
 
 app.use(cors());
 
@@ -23,9 +24,10 @@ app.get("/text/", (req, res) => {
 });
 
 app.get("/random-image", (req, res) => {
-	PythonShell.run("filename-image.py", null, (err, result) => {
+	PythonShell.run("./dcgan/hopefullythisworks.py", null, (err, result) => {
 		if (err) throw err;
-		res.send(filename); // send filename
+		console.log("hopefully this logs");
+		res.send("123.jpg"); // send filename
 	});
 });
 
